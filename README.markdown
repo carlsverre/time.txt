@@ -4,11 +4,9 @@ as a task list.
 
 Todo
 ----
- + finish start/stop
  + add finished function (moves it to a finished list?  Or seperate section?)
  + Testing
  + add csv output to send it to excel
- + add "stats" output which will total up all hours on list
 
 Example run
 --------

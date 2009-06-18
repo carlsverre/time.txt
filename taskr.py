@@ -12,11 +12,11 @@ TASK_FILE = 'todo.txt'
 # VARIABLES
 tasks = []
 
-line_pattern = '^\[(?P<num>.*)\] \[(?P<status>.)\] \[(?P<time>\d+:\d+)\] \[(?P<task>.*)\]( \[(?P<start_time>.*)\])?'
+line_pattern = '^\[(?P<num>.*)\] \[(?P<status>.)\] \[(?P<time>\d+:\d+)\] \[(?P<task>.*?)\](?: \[(?P<start_time>.*)\])?'
 line_format  = '[{num:d}] [{stat}] [{time}] [{task}]'
 start_time_format = '%H:%M %d:%m:%Y'
 
-stdout_format = '[{num:d}] [{task}] [{msg}]'
+stdout_format_string = '[{num:d}] [{task}] [{msg}]'
 
 # TASK CLASS
 class Task:
@@ -61,24 +61,35 @@ class Task:
             self.time_start = datetime.datetime.strptime(s.group('start_time'), start_time_format)
         else:
             self.running = False
-        
+
+    def start(self):
+        if self.running:
+            print("Error: Task already running")
+            return
+
+        self.running = True
+        self.time_start = datetime.datetime.now()
+
+    def stop(self):
+        if not self.running:
+            print("Error: Task already stopped")
+            return
+
+        self.running = False
+
+        self.update_total_time()
 
     def seralize(self):
         now = datetime.datetime.now()
         if self.running:
             status = 'x'
-            difference = now - self.time_start
-            self.time_total = self.time_total + difference
+            self.update_total_time()
             now = ' ['+now.strftime(start_time_format)+']'
         else:
             status = ' '
             now = ""
         
-        hours = self.time_total.days * 24
-        minutes = math.floor(self.time_total.seconds / 60)
-        hours = hours + math.floor(minutes / 60)
-        minutes = minutes % 60
-        formatted_time = str(int(hours)).zfill(2) + ":" + str(int(minutes)).zfill(2)
+        formatted_time = format_timedelta(self.time_total)
 
         return line_format.format(num=self.num, stat=status, time=formatted_time, task=self.task) + now
 
@@ -86,6 +97,16 @@ class Task:
         if self.running:
             return 'Running'
         return 'Stopped'
+
+    def update_total_time(self):
+        if self.running:
+            now = datetime.datetime.now()
+            difference = now - self.time_start
+            self.time_total = self.time_total + difference
+
+    def get_total_time(self):
+        self.update_total_time()
+        return format_timedelta(self.time_total)
 
 
 # UTIL
@@ -122,8 +143,20 @@ def prompt(question):
     elif ans == 'n':
         return False
 
-# CALLBACKS
+def format_timedelta(td):
+    hours = td.days * 24
+    minutes = math.floor(td.seconds / 60)
+    hours = hours + math.floor(minutes / 60)
+    minutes = minutes % 60
+    return str(int(hours)).zfill(2) + ":" + str(int(minutes)).zfill(2)
 
+def stdout_format(n, t, m, time=None):
+    string = stdout_format_string.format(num=n, task=t, msg=m)
+    if time:
+        string += ' [' + time + ']'
+    print(string)
+
+# CALLBACKS
 def add(option,opt,value,parser):
     task_str = value.strip()
     if not task_str:
@@ -136,7 +169,7 @@ def add(option,opt,value,parser):
 
     task_obj = Task(task=task_str, num=n)
 
-    print(stdout_format.format(num=task_obj.num, task=task_obj.task, msg='Added'))
+    stdout_format(task_obj.num, task_obj.task, 'Added')
     tasks.append(task_obj)
     save()
 
@@ -153,19 +186,36 @@ def remove(option,opt,value,parser):
 
     for i,task in enumerate(tasks):
         if which == task.num:
-            print(stdout_format.format(num=task.num, task=task.task, msg='Deleted'))
+            stdout_format(task_obj.num, task_obj.task, 'Removed')
             del tasks[i]
             save()
 
 def start(option,opt,value,parser):
-    pass
+    which = int(value)
+    for i,task in enumerate(tasks):
+        if which == task.num:
+            stdout_format(task.num, task.task, 'Started')
+            tasks[i].start()
+            save()
 
 def stop(option,opt,value,parser):
-    pass
+    which = int(value)
+    for i,task in enumerate(tasks):
+        if which == task.num:
+            stdout_format(task.num, task.task, 'Stopped', task.get_total_time())
+            tasks[i].stop()
+            save()
 
 def list(option,opt,value,parser):
     for task in tasks:
-        print(stdout_format.format(num=task.num, task=task.task, msg=task.formatted_running()))
+        stdout_format(task.num,task.task,task.formatted_running(), task.get_total_time())
+
+def total_time(option,opt,value,parser):
+    total = datetime.timedelta()
+    for task in tasks:
+        total += task.time_total
+    
+    print("Total time on list: " + format_timedelta(total))
 
 def main():
     """
@@ -204,6 +254,10 @@ def main():
                     help='List all tasks',
                     action='callback',
                     callback=list)
+    parser.add_option('-o','--total',
+                    help='Output total time in todo to stdout',
+                    action='callback',
+                    callback=total_time)
 
     (options,args) = parser.parse_args()
 
