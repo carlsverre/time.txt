@@ -1,3 +1,5 @@
+Taskr
+=====
 This program will be a project timing program running on plain text files.
 It will be simple to use and also double as a task list.
 
@@ -8,7 +10,7 @@ Todo
  + add csv output to send it to excel
 
 Example run
---------
+-----------
 
 	$ taskr add "School Work"
 	[1] School Work [not started]
