@@ -7,7 +7,7 @@ import datetime
 import math
 
 # CONFIG
-TASK_FILE = 'todo.txt'
+TASK_FILE = '/home/carl/dropbox/taskr/todo.txt'
 
 # VARIABLES
 tasks = []
