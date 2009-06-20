@@ -1,13 +1,13 @@
 Taskr
 =====
-This program will be a project timing program running on plain text files.
-It will be simple to use and also double as a task list.
+This program is be a project timing program running on plain text files.
+It is simple to use and also doubles as a task list.
 
 Installation and Running
 ------------------------
 + Just drop the source file somewhere on your path, or link it.
 + Run it with ./taskr (or if its on your path, just taskr works).
-+ I recommend you alias t to taskr
++ I recommend you alias t to taskr.  Also the following are useful:
 	- tl for taskr -l
 	- ts for taskr -s
 	- tt for taskr -t
@@ -18,9 +18,6 @@ Todo
  + add finished function (moves it to a finished list?)
  + Testing
  + add csv output to send it to excel
- + add categories(+category)
-	- list output and todo file should be sorted by category
-	- you can list select categories like: taskr -l CATEGORY
  + maintain comments in text file
 
 Example run
