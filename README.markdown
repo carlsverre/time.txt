@@ -18,54 +18,84 @@ Todo
  + add finished function (moves it to a finished list?)
  + Testing
  + add csv output to send it to excel
- + add categories and tags (+tag, =category)
+ + add categories(+category)
 	- list output and todo file should be sorted by category
 	- you can list select categories like: taskr -l CATEGORY
-	- you can move items between categories and add tags to items
  + maintain comments in text file
 
 Example run
 -----------
+	$ taskr -l
+	+ personal
+	[1] [taskr work] [Running] [03:35]
 
+	+ school
+	[0] [csc360 P2] [Stopped] [01:15]
+
+	+ work
+	[3] [Francine Legault Phone] [Stopped] [00:00]
+
+	$ taskr -a "Demoing Taskr +demo" -a "Multiple Items +demo"
+	[4] [Demoing Taskr] [Added to demo]
+	[5] [Multiple Items] [Added to demo]
 	$ taskr -l
-	[0] [csc360 P2 +school] [Stopped] [01:15]
-	[1] [taskr work +personal] [Running] [00:01]
-	[3] [Francine Legault Phone +work] [Stopped] [00:00]
-	$ taskr -a "Taskr Demo"
-	[4] [Taskr Demo] [Added]
-	$ taskr -l
-	[0] [csc360 P2 +school] [Stopped] [01:15]
-	[1] [taskr work +personal] [Running] [00:01]
-	[3] [Francine Legault Phone +work] [Stopped] [00:00]
-	[4] [Taskr Demo] [Stopped] [00:00]
+	+ demo
+	[4] [Demoing Taskr] [Stopped] [00:00]
+	[5] [Multiple Items] [Stopped] [00:00]
+
+	+ personal
+	[1] [taskr work] [Running] [03:37]
+
+	+ school
+	[0] [csc360 P2] [Stopped] [01:15]
+
+	+ work
+	[3] [Francine Legault Phone] [Stopped] [00:00]
+
 	$ taskr -s 4
-	[4] [Taskr Demo] [Started]
-	$ taskr -l
-	[0] [csc360 P2 +school] [Stopped] [01:15]
-	[1] [taskr work +personal] [Running] [00:01]
-	[3] [Francine Legault Phone +work] [Stopped] [00:00]
-	[4] [Taskr Demo] [Running] [00:00]
-	$ cat todo.txt 
-	[0] [ ] [01:15] [csc360 P2 +school]
-	[1] [x] [00:01] [taskr work +personal] [18:49 19:06:2009]
-	[3] [ ] [00:00] [Francine Legault Phone +work]
-	[4] [x] [00:00] [Taskr Demo] [18:49 19:06:2009]
-	$ taskr -l
-	[0] [csc360 P2 +school] [Stopped] [01:15]
-	[1] [taskr work +personal] [Running] [00:02]
-	[3] [Francine Legault Phone +work] [Stopped] [00:00]
-	[4] [Taskr Demo] [Running] [00:01]
+	[4] [Demoing Taskr] [Started]
+	$ cat dropbox/taskr/todo.txt
+	+ demo
+	[4] [x] [00:00] [Demoing Taskr] [21:01 19:06:2009]
+	[5] [ ] [00:00] [Multiple Items]
+
+	+ personal
+	[1] [x] [03:37] [taskr work] [21:01 19:06:2009]
+
+	+ school
+	[0] [ ] [01:15] [csc360 P2]
+
+	+ work
+	[3] [ ] [00:00] [Francine Legault Phone]
+
 	$ taskr -t 4
-	[4] [Taskr Demo] [Stopped] [00:01]
+	[4] [Demoing Taskr] [Stopped] [00:01]
+	$ taskr -l
+	+ demo
+	[4] [Demoing Taskr] [Stopped] [00:01]
+	[5] [Multiple Items] [Stopped] [00:00]
+
+	+ personal
+	[1] [taskr work] [Running] [03:38]
+
+	+ school
+	[0] [csc360 P2] [Stopped] [01:15]
+
+	+ work
+	[3] [Francine Legault Phone] [Stopped] [00:00]
+
 	$ taskr -r 4
-	[4] [Taskr Demo] [Removed]
+	[4] [Demoing Taskr] [Removed from demo]
+	$ taskr -r 5
+	[5] [Multiple Items] [Removed from demo]
 	$ taskr -o
-	Total time on list: 03:53
+	Total time on list: 04:44
 
 Commands
 --------
 
 	add "TASK" - adds task with description TASK to list
+				 (use +category to add tasks to categories)
 	remove NUM - removes task with num NUM
 	start NUM  - starts task with num NUM
 	stop NUM   - stops task with num NUM
@@ -74,8 +104,17 @@ Commands
 
 Example task file
 -----------------
+	+ demo
+	[4] [x] [00:00] [Demoing Taskr] [21:01 19:06:2009]
+	[5] [ ] [00:00] [Multiple Items]
 
-	[0] [ ] [01:15] [csc360 P2 +school]
-	[1] [x] [00:01] [taskr work +personal] [18:49 19:06:2009]
-	[3] [ ] [00:00] [Francine Legault Phone +work]
-	[4] [x] [00:00] [Taskr Demo] [18:49 19:06:2009]
+	+ personal
+	[1] [x] [03:37] [taskr work] [21:01 19:06:2009]
+
+	+ school
+	[0] [ ] [01:15] [csc360 P2]
+
+	+ work
+	[3] [ ] [00:00] [Francine Legault Phone]
+
+

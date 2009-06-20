@@ -5,9 +5,13 @@ import fileinput
 import re
 import datetime
 import math
+from operator import attrgetter
 
 # CONFIG
 TASK_FILE = '/home/carl/dropbox/taskr/todo.txt'
+
+cat_starter = '+'
+default_category = 'uncategorized'
 
 # VARIABLES
 tasks = []
@@ -17,10 +21,11 @@ line_format  = '[{num:d}] [{stat}] [{time}] [{task}]'
 start_time_format = '%H:%M %d:%m:%Y'
 
 stdout_format_string = '[{num:d}] [{task}] [{msg}]'
+stdout_cat_format = cat_starter+' {category}'
 
 # TASK CLASS
 class Task:
-    def __init__(self, line=None, task="", num=0):
+    def __init__(self, line=None, task="", num=0, cat=""):
         """
         Creates a task object by parsing
         a line out of the task file
@@ -29,17 +34,19 @@ class Task:
         """
         self.time_total = datetime.timedelta()
         self.running = False
+        self.category = ""
 
         if line:
-            self.parse(line)
+            self.parse_line(line)
+            self.category = cat
         elif task:
-            self.task = task
             self.num = num
+            self.task = self.parse_task(task)
         else:
             self.task = ""
             self.num = 0
         
-    def parse(self, line):
+    def parse_line(self, line):
         """
         Parses a line formatted like so:
         [status] [00:00] [task here]
@@ -61,6 +68,25 @@ class Task:
             self.time_start = datetime.datetime.strptime(s.group('start_time'), start_time_format)
         else:
             self.running = False
+
+    def parse_task(self, task):
+        """
+        Parses a task for its category
+
+        task -- task to be parsed
+        """
+
+        for word in task.split(' '):
+            if word.startswith(cat_starter):
+                self.set_category(word)
+                task=re.sub('\s?\+'+word.strip(cat_starter)+'\s?','',task)
+                return task
+
+        self.category = default_category
+        return task
+
+    def set_category(self, category):
+        self.category = category.strip(cat_starter)
 
     def start(self):
         if self.running:
@@ -114,25 +140,53 @@ def load():
     """
     Loads the task list
     """
+
+    last_category = default_category
+
     for line in fileinput.input(TASK_FILE):
         t = line.strip()
         if not t or t.startswith('#'):
             continue
-        tasks.append(Task(line=t))
+        if t.startswith(cat_starter):
+            last_category = t.lstrip(cat_starter+' ')
+            continue
+        tasks.append(Task(line=t, cat=last_category))
 
 def save():
     """
     Saves all the tasks
     """
 
-    # sort the task list
-    tasks.sort(compare_tasks)
+    categories = create_categories_list()
 
     f = open(TASK_FILE, 'w')
-    for task in tasks:
-        f.write(task.seralize() + '\n')
+    for category,task_list in categories:
+        f.write(cat_starter + ' ' + category + '\n')
+        for task in task_list:
+            f.write(task.seralize() + '\n')
+        f.write('\n')
 
-def compare_tasks(t,t2):
+def create_categories_list():
+    tasks.sort(key=attrgetter('category'))
+    
+    categories = []
+    for task in tasks:
+        found = False
+        for category,task_list in categories:
+            if task.category == category:
+                task_list.append(task)
+                found = True
+                break
+        if found: continue
+        categories.append((task.category,[task]))
+
+    # sort the task lists
+    for category,task_list in categories:
+        task_list.sort(compare_task_nums)
+
+    return categories
+
+def compare_task_nums(t,t2):
     return t.num-t2.num
 
 def prompt(question):
@@ -156,6 +210,25 @@ def stdout_format(n, t, m, time=None):
         string += ' [' + time + ']'
     print(string)
 
+def get_args(parser):
+    """
+    returns a list of rargs for callback functions
+    the rargs are the args between the callback option
+    and the next option
+
+    parser -- the parser instance from the callback option
+    """
+
+    ret_list = []
+    for arg in parser.rargs:
+        if arg[:2] == '--' and len(arg) > 2:
+            break
+        if arg[:1] == '-' and len(arg) > 1:
+            break
+        ret_list.append(arg)
+    del parser.rargs[:len(ret_list)]
+    return ret_list
+
 # CALLBACKS
 def add(option,opt,value,parser):
     task_str = value.strip()
@@ -163,13 +236,13 @@ def add(option,opt,value,parser):
         print("Error: No task description")
 
     n=0
-    for t in tasks:
+    for t in sorted(tasks,compare_task_nums):
         if t.num == n:
             n=t.num+1
 
     task_obj = Task(task=task_str, num=n)
 
-    stdout_format(task_obj.num, task_obj.task, 'Added')
+    stdout_format(task_obj.num, task_obj.task, 'Added to '+task_obj.category)
     tasks.append(task_obj)
     save()
 
@@ -186,7 +259,7 @@ def remove(option,opt,value,parser):
 
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task.num, task.task, 'Removed')
+            stdout_format(task.num, task.task, 'Removed from '+task.category)
             del tasks[i]
             save()
 
@@ -207,8 +280,21 @@ def stop(option,opt,value,parser):
             save()
 
 def list(option,opt,value,parser):
-    for task in tasks:
-        stdout_format(task.num,task.task,task.formatted_running(), task.get_total_time())
+    args = get_args(parser)
+    categories = create_categories_list()
+
+    search_cat = ''
+    if args:
+        search_cat = args[0].lower()
+
+    for category,task_list in categories:
+        if (search_cat != '') and (category.lower() != search_cat):
+            continue
+
+        print(stdout_cat_format.format(category=category))
+        for task in task_list:
+            stdout_format(task.num,task.task,task.formatted_running(), task.get_total_time())
+        print('')
 
 def total_time(option,opt,value,parser):
     total = datetime.timedelta()
