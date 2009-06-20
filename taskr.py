@@ -186,7 +186,7 @@ def remove(option,opt,value,parser):
 
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task_obj.num, task_obj.task, 'Removed')
+            stdout_format(task.num, task.task, 'Removed')
             del tasks[i]
             save()
 
