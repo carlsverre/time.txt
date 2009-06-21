@@ -1,4 +1,4 @@
-Taskr
+Time.txt
 =====
 This program is be a project timing program running on plain text files.
 It is simple to use and also doubles as a task list. Changelog is at the end
@@ -6,12 +6,12 @@ It is simple to use and also doubles as a task list. Changelog is at the end
 Installation and Running
 ------------------------
 + Just drop the source file somewhere on your path, or link it.
-+ Run it with ./taskr (or if its on your path, just taskr works).
-+ I recommend you alias t to taskr.  Also the following aliases are useful:
-	- tl for taskr -l
-	- ts for taskr -s
-	- tt for taskr -t
-	- tr for taskr -r
++ Run it with ./timetxt (or if its on your path, just timetxt works).
++ I recommend you alias t to timetxt.  Also the following aliases are useful:
+	- tl for timetxt -l
+	- ts for timetxt -s
+	- tt for timetxt -t
+	- tr for timetxt -r
 
 Todo
 ----
@@ -20,9 +20,9 @@ Todo
 
 Example run
 -----------
-	$ taskr -l
+	$ timetxt -l
 	+ personal
-	[1] [taskr work] [Running] [03:35]
+	[1] [timetxt work] [Running] [03:35]
 
 	+ school
 	[0] [csc360 P2] [Stopped] [01:15]
@@ -30,16 +30,16 @@ Example run
 	+ work
 	[3] [Francine Legault Phone] [Stopped] [00:00]
 
-	$ taskr -a "Demoing Taskr +demo" -a "Multiple Items +demo"
-	[4] [Demoing Taskr] [Added to demo]
+	$ timetxt -a "Demoing Time.txt +demo" -a "Multiple Items +demo"
+	[4] [Demoing Time.txt] [Added to demo]
 	[5] [Multiple Items] [Added to demo]
-	$ taskr -l
+	$ timetxt -l
 	+ demo
-	[4] [Demoing Taskr] [Stopped] [00:00]
+	[4] [Demoing Time.txt] [Stopped] [00:00]
 	[5] [Multiple Items] [Stopped] [00:00]
 
 	+ personal
-	[1] [taskr work] [Running] [03:37]
+	[1] [timetxt work] [Running] [03:37]
 
 	+ school
 	[0] [csc360 P2] [Stopped] [01:15]
@@ -47,15 +47,15 @@ Example run
 	+ work
 	[3] [Francine Legault Phone] [Stopped] [00:00]
 
-	$ taskr -s 4
-	[4] [Demoing Taskr] [Started]
-	$ cat dropbox/taskr/todo.txt
+	$ timetxt -s 4
+	[4] [Demoing Time.txt] [Started]
+	$ cat dropbox/timetxt/todo.txt
 	+ demo
-	[4] [x] [00:00] [Demoing Taskr] [21:01 19:06:2009]
+	[4] [x] [00:00] [Demoing Time.txt] [21:01 19:06:2009]
 	[5] [ ] [00:00] [Multiple Items]
 
 	+ personal
-	[1] [x] [03:37] [taskr work] [21:01 19:06:2009]
+	[1] [x] [03:37] [timetxt work] [21:01 19:06:2009]
 
 	+ school
 	[0] [ ] [01:15] [csc360 P2]
@@ -63,15 +63,15 @@ Example run
 	+ work
 	[3] [ ] [00:00] [Francine Legault Phone]
 
-	$ taskr -t 4
-	[4] [Demoing Taskr] [Stopped] [00:01]
-	$ taskr -l
+	$ timetxt -t 4
+	[4] [Demoing Time.txt] [Stopped] [00:01]
+	$ timetxt -l
 	+ demo
-	[4] [Demoing Taskr] [Stopped] [00:01]
+	[4] [Demoing Time.txt] [Stopped] [00:01]
 	[5] [Multiple Items] [Stopped] [00:00]
 
 	+ personal
-	[1] [taskr work] [Running] [03:38]
+	[1] [timetxt work] [Running] [03:38]
 
 	+ school
 	[0] [csc360 P2] [Stopped] [01:15]
@@ -79,11 +79,11 @@ Example run
 	+ work
 	[3] [Francine Legault Phone] [Stopped] [00:00]
 
-	$ taskr -r 4
-	[4] [Demoing Taskr] [Removed from demo]
-	$ taskr -r 5
+	$ timetxt -r 4
+	[4] [Demoing Time.txt] [Removed from demo]
+	$ timetxt -r 5
 	[5] [Multiple Items] [Removed from demo]
-	$ taskr -o
+	$ timetxt -o
 	Total time on list: 04:44
 
 Commands
@@ -102,11 +102,11 @@ Commands
 Example task file
 -----------------
 	+ demo
-	[4] [x] [00:00] [00:00] [Demoing Taskr] [21:01 19:06:2009]
+	[4] [x] [00:00] [00:00] [Demoing Time.txt] [21:01 19:06:2009]
 	[5] [ ] [00:00] [00:00] [Multiple Items]
 
 	+ personal
-	[1] [x] [03:37] [00:38] [taskr work] [21:01 19:06:2009]
+	[1] [x] [03:37] [00:38] [timetxt work] [21:01 19:06:2009]
 
 	+ school
 	[0] [ ] [01:15] [00:00] [csc360 P2]
@@ -117,7 +117,8 @@ Example task file
 Changelog
 ---------
 
-	0.9
+	0.9		June 21, 2009
+		+	renamed project from taskr to time.txt due to taskr being taken
 		+	framework for functionality of new commands (export, update)
 		+	writes to temporary files rather than main database
 			(updates main database when finished)
