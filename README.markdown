@@ -7,7 +7,7 @@ Installation and Running
 ------------------------
 + Just drop the source file somewhere on your path, or link it.
 + Run it with ./taskr (or if its on your path, just taskr works).
-+ I recommend you alias t to taskr.  Also the following are useful:
++ I recommend you alias t to taskr.  Also the following aliases are useful:
 	- tl for taskr -l
 	- ts for taskr -s
 	- tt for taskr -t
@@ -18,7 +18,6 @@ Todo
  + add finished function (moves it to a finished list?)
  + Testing
  + add csv output to send it to excel
- + maintain comments in text file
 
 Example run
 -----------
