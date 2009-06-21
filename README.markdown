@@ -1,7 +1,7 @@
 Time.txt
 =====
 This program is be a project timing program running on plain text files.
-It is simple to use and also doubles as a task list. Changelog is at the end
+It is simple to use and also doubles as a task list. Changelog is at the end.
 
 Installation and Running
 ------------------------
