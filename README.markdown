@@ -1,7 +1,7 @@
 Taskr
 =====
 This program is be a project timing program running on plain text files.
-It is simple to use and also doubles as a task list.
+It is simple to use and also doubles as a task list. Changelog is at the end
 
 Installation and Running
 ------------------------
@@ -15,9 +15,8 @@ Installation and Running
 
 Todo
 ----
- + add finished function (moves it to a finished list?)
  + Testing
- + add csv output to send it to excel
+ + implement update and export functions
 
 Example run
 -----------
@@ -97,20 +96,32 @@ Commands
 	stop NUM   - stops task with num NUM
 	list       - lists all tasks
 	total      - total time of tasks on list
+	update	   - Update sqlite database backend (for stats and archiving) (not implemented)
+	export	   - Exports database to CSV (not implemented)
 
 Example task file
 -----------------
 	+ demo
-	[4] [x] [00:00] [Demoing Taskr] [21:01 19:06:2009]
-	[5] [ ] [00:00] [Multiple Items]
+	[4] [x] [00:00] [00:00] [Demoing Taskr] [21:01 19:06:2009]
+	[5] [ ] [00:00] [00:00] [Multiple Items]
 
 	+ personal
-	[1] [x] [03:37] [taskr work] [21:01 19:06:2009]
+	[1] [x] [03:37] [00:38] [taskr work] [21:01 19:06:2009]
 
 	+ school
-	[0] [ ] [01:15] [csc360 P2]
+	[0] [ ] [01:15] [00:00] [csc360 P2]
 
 	+ work
-	[3] [ ] [00:00] [Francine Legault Phone]
+	[3] [ ] [00:00] [00:00] [Francine Legault Phone]
 
+Changelog
+---------
 
+	0.9
+		+	framework for functionality of new commands (export, update)
+		+	writes to temporary files rather than main database
+			(updates main database when finished)
+	0.8
+		+	All commands except export and update.
+	0.1
+		+	Initial Commit

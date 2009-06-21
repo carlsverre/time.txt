@@ -1,10 +1,16 @@
 #!/usr/bin/python
 
+######################
+# Taskr.py ---- V0.9 #
+######################
+
 import optparse
 import fileinput
 import re
 import datetime
 import math
+import shutil
+import os
 from operator import attrgetter
 
 # CONFIG
@@ -15,9 +21,10 @@ default_category = 'uncategorized'
 
 # VARIABLES
 tasks = []
+comments = []   # Comments will be moved to beginning of file
 
-line_pattern = '^\[(?P<num>.*)\] \[(?P<status>.)\] \[(?P<time>\d+:\d+)\] \[(?P<task>.*?)\](?: \[(?P<start_time>.*)\])?'
-line_format  = '[{num:d}] [{stat}] [{time}] [{task}]'
+line_pattern = '^\[(?P<num>.*)\] \[(?P<status>.)\] \[(?P<time>\d+:\d+)\] \[(?P<session>\d+:\d+)\] \[(?P<task>.*?)\](?: \[(?P<start_time>.*)\])?'
+line_format  = '[{num:d}] [{stat}] [{time}] [{session}] [{task}]'
 start_time_format = '%H:%M %d:%m:%Y'
 
 stdout_format_string = '[{num:d}] [{task}] [{msg}]'
@@ -33,6 +40,7 @@ class Task:
         line -- a line to parse
         """
         self.time_total = datetime.timedelta()
+        self.session_time = datetime.timedelta()
         self.running = False
         self.category = ""
 
@@ -57,10 +65,13 @@ class Task:
         status = s.group('status')
         self.num = int(s.group('num'))
         t = s.group('time').split(':')
+        session_time = s.group('session').split(':')
         task = s.group('task')
 
         self.time_total = datetime.timedelta(hours=   int(t[0]),
                                              minutes= int(t[1]))
+        self.session_time = datetime.timedelta(hours=      int(session_time[0]),
+                                                    minutes=    int(session_time[1]))
         self.task = task
 
         if status == 'x':
@@ -116,8 +127,9 @@ class Task:
             now = ""
         
         formatted_time = format_timedelta(self.time_total)
+        formatted_session_time = format_timedelta(self.session_time)
 
-        return line_format.format(num=self.num, stat=status, time=formatted_time, task=self.task) + now
+        return line_format.format(num=self.num, stat=status, time=formatted_time, session=formatted_session_time, task=self.task) + now
 
     def formatted_running(self):
         if self.running:
@@ -129,6 +141,7 @@ class Task:
             now = datetime.datetime.now()
             difference = now - self.time_start
             self.time_total = self.time_total + difference
+            self.session_time = self.session_time + difference
 
     def get_total_time(self):
         self.update_total_time()
@@ -145,7 +158,9 @@ def load():
 
     for line in fileinput.input(TASK_FILE):
         t = line.strip()
-        if not t or t.startswith('#'):
+        if not t: continue
+        if t.startswith('#'):
+            comments.append(t+'\n')
             continue
         if t.startswith(cat_starter):
             last_category = t.lstrip(cat_starter+' ')
@@ -159,12 +174,24 @@ def save():
 
     categories = create_categories_list()
 
-    f = open(TASK_FILE, 'w')
+    # Create temp file
+    temp_filename = '/tmp/taskr.%s.txt' % os.getpid()
+    temp = open(temp_filename, 'w')
+
+    # Write out comments
+    for comment in comments:
+        temp.write(comment)
+    temp.write('\n')
+
     for category,task_list in categories:
-        f.write(cat_starter + ' ' + category + '\n')
+        temp.write(cat_starter + ' ' + category + '\n')
         for task in task_list:
-            f.write(task.seralize() + '\n')
-        f.write('\n')
+            temp.write(task.seralize() + '\n')
+        temp.write('\n')
+
+    # Close and then move temp file to task_file (apply changes)
+    temp.close()
+    shutil.move(temp.name, TASK_FILE)
 
 def create_categories_list():
     tasks.sort(key=attrgetter('category'))
@@ -303,6 +330,32 @@ def total_time(option,opt,value,parser):
     
     print("Total time on list: " + format_timedelta(total))
 
+def update_database(option, opt, value, parser):
+    """
+    This function updates a sqlite database with the latest
+    session data.
+
+    For each task:
+        if not database[task]:
+            create database[task]
+               task := {id, description, total_time, last_updated} 
+        Create database[session]:
+            session := {id, task_key, datetime_now, task_key->last_updated, session_time}
+        database[task]->last_updated = now
+        database[task]->total_time = task.total_time
+
+    Note database[task]->id != task.num
+
+    Function also clears session_time for every task in text database
+    """
+    pass
+
+def export_csv(option, opt, value, parser):
+    """
+    Exports the sqlite database to csv (convienience function)
+    """
+    pass
+
 def main():
     """
     Program entry point
@@ -344,6 +397,14 @@ def main():
                     help='Output total time in todo to stdout',
                     action='callback',
                     callback=total_time)
+    parser.add_option('-u','--update',
+                    help='Update sqlite database (run via cron, sessions are defined as the time between updates)',
+                    action='callback',
+                    callback=update_database)
+    parser.add_option('-e','--export',
+                    help='Exports database to CSV',
+                    action='callback',
+                    callback=export_csv)
 
     (options,args) = parser.parse_args()
 
