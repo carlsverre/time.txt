@@ -18,74 +18,6 @@ Todo
  + Testing
  + implement update and export functions
 
-Example run
------------
-	$ timetxt -l
-	+ personal
-	[1] [timetxt work] [Running] [03:35]
-
-	+ school
-	[0] [csc360 P2] [Stopped] [01:15]
-
-	+ work
-	[3] [Francine Legault Phone] [Stopped] [00:00]
-
-	$ timetxt -a "Demoing Time.txt +demo" -a "Multiple Items +demo"
-	[4] [Demoing Time.txt] [Added to demo]
-	[5] [Multiple Items] [Added to demo]
-	$ timetxt -l
-	+ demo
-	[4] [Demoing Time.txt] [Stopped] [00:00]
-	[5] [Multiple Items] [Stopped] [00:00]
-
-	+ personal
-	[1] [timetxt work] [Running] [03:37]
-
-	+ school
-	[0] [csc360 P2] [Stopped] [01:15]
-
-	+ work
-	[3] [Francine Legault Phone] [Stopped] [00:00]
-
-	$ timetxt -s 4
-	[4] [Demoing Time.txt] [Started]
-	$ cat dropbox/timetxt/todo.txt
-	+ demo
-	[4] [x] [00:00] [Demoing Time.txt] [21:01 19:06:2009]
-	[5] [ ] [00:00] [Multiple Items]
-
-	+ personal
-	[1] [x] [03:37] [timetxt work] [21:01 19:06:2009]
-
-	+ school
-	[0] [ ] [01:15] [csc360 P2]
-
-	+ work
-	[3] [ ] [00:00] [Francine Legault Phone]
-
-	$ timetxt -t 4
-	[4] [Demoing Time.txt] [Stopped] [00:01]
-	$ timetxt -l
-	+ demo
-	[4] [Demoing Time.txt] [Stopped] [00:01]
-	[5] [Multiple Items] [Stopped] [00:00]
-
-	+ personal
-	[1] [timetxt work] [Running] [03:38]
-
-	+ school
-	[0] [csc360 P2] [Stopped] [01:15]
-
-	+ work
-	[3] [Francine Legault Phone] [Stopped] [00:00]
-
-	$ timetxt -r 4
-	[4] [Demoing Time.txt] [Removed from demo]
-	$ timetxt -r 5
-	[5] [Multiple Items] [Removed from demo]
-	$ timetxt -o
-	Total time on list: 04:44
-
 Commands
 --------
 
@@ -101,15 +33,21 @@ Commands
 
 Example task file
 -----------------
-	+ demo
-	[4] [x] [00:00] [00:00] [Demoing Time.txt] [21:01 19:06:2009]
-	[5] [ ] [00:00] [00:00] [Multiple Items]
+	####################################################################
+	#                   Comments must be in this block                 #
+	#------------------------------------------------------------------#
+	# [num] [active] [total time] [session time] [task] [time started] #
+	####################################################################
 
 	+ personal
-	[1] [x] [03:37] [00:38] [timetxt work] [21:01 19:06:2009]
+	[1] [x] [05:26] [01:38] [time.txt work] [17:44 21:06:2009]
 
 	+ school
 	[0] [ ] [01:15] [00:00] [csc360 P2]
+
+	+ studying
+	[4] [ ] [03:54] [00:00] [csc360]
+	[5] [ ] [05:15] [00:41] [csc305]
 
 	+ work
 	[3] [ ] [00:00] [00:00] [Francine Legault Phone]
@@ -117,12 +55,12 @@ Example task file
 Changelog
 ---------
 
-	0.9		June 21, 2009
-		+	renamed project from taskr to time.txt due to taskr being taken
-		+	framework for functionality of new commands (export, update)
-		+	writes to temporary files rather than main database
-			(updates main database when finished)
-	0.8
-		+	All commands except export and update.
-	0.1
-		+	Initial Commit
+* 0.9	June 21, 2009
+	+	renamed project from taskr to time.txt due to taskr being taken
+	+	framework for functionality of new commands (export, update)
+	+	writes to temporary files rather than main database
+		(updates main database when finished)
+* 0.8
+	+	All commands except export and update.
+* 0.1
+	+	Initial Commit

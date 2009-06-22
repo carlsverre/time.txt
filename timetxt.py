@@ -44,7 +44,8 @@ line_pattern = '^\[(?P<num>.*)\] \[(?P<status>.)\] \[(?P<time>\d+:\d+)\] \[(?P<s
 line_format  = '[{num:d}] [{stat}] [{time}] [{session}] [{task}]'
 start_time_format = '%H:%M %d:%m:%Y'
 
-stdout_format_string = '[{num:d}] [{task}] [{msg}]'
+stdout_format_meta = '[{num:d}] [{msg}]'
+stdout_format_gen = ' [{text}]' 
 stdout_cat_format = cat_starter+' {category}'
 
 # TASK CLASS
@@ -150,8 +151,8 @@ class Task:
 
     def formatted_running(self):
         if self.running:
-            return 'Running'
-        return 'Stopped'
+            return 'running'
+        return 'stopped'
 
     def update_total_time(self):
         if self.running:
@@ -161,8 +162,10 @@ class Task:
             self.session_time = self.session_time + difference
 
     def get_total_time(self):
-        self.update_total_time()
         return format_timedelta(self.time_total)
+
+    def get_session_time(self):
+        return format_timedelta(self.session_time)
 
 
 # UTIL
@@ -248,10 +251,13 @@ def format_timedelta(td):
     minutes = minutes % 60
     return str(int(hours)).zfill(2) + ":" + str(int(minutes)).zfill(2)
 
-def stdout_format(n, t, m, time=None):
-    string = stdout_format_string.format(num=n, task=t, msg=m)
+def stdout_format(num, task, message, time=None, session=None):
+    string = stdout_format_meta.format(num=num, msg=message)
     if time:
-        string += ' [' + time + ']'
+        string += stdout_format_gen.format(text=time)
+    if session:
+        string += stdout_format_gen.format(text=session)
+    string += stdout_format_gen.format(text=task)
     print(string)
 
 def get_args(parser):
@@ -286,7 +292,7 @@ def add(option,opt,value,parser):
 
     task_obj = Task(task=task_str, num=n)
 
-    stdout_format(task_obj.num, task_obj.task, 'Added to '+task_obj.category)
+    stdout_format(task_obj.num, task_obj.task, '+'+task_obj.category)
     tasks.append(task_obj)
     save()
 
@@ -303,7 +309,7 @@ def remove(option,opt,value,parser):
 
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task.num, task.task, 'Removed from '+task.category)
+            stdout_format(task.num, task.task, '-'+task.category)
             del tasks[i]
             save()
 
@@ -311,7 +317,7 @@ def start(option,opt,value,parser):
     which = int(value)
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task.num, task.task, 'Started')
+            stdout_format(task.num, task.task, 'started')
             tasks[i].start()
             save()
 
@@ -319,7 +325,8 @@ def stop(option,opt,value,parser):
     which = int(value)
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task.num, task.task, 'Stopped', task.get_total_time())
+            task.update_total_time()
+            stdout_format(task.num, task.task, 'stopped', task.get_total_time(), task.get_session_time())
             tasks[i].stop()
             save()
 
@@ -337,15 +344,19 @@ def list(option,opt,value,parser):
 
         print(stdout_cat_format.format(category=category))
         for task in task_list:
-            stdout_format(task.num,task.task,task.formatted_running(), task.get_total_time())
+            task.update_total_time()
+            stdout_format(task.num,task.task,task.formatted_running(), task.get_total_time(), session=task.get_session_time())
         print('')
 
 def total_time(option,opt,value,parser):
     total = datetime.timedelta()
+    total_session = datetime.timedelta()
     for task in tasks:
         total += task.time_total
+        total_session += task.session_time
     
     print("Total time on list: " + format_timedelta(total))
+    print("Total time this session: " + format_timedelta(total_session))
 
 def update_database(option, opt, value, parser):
     """
