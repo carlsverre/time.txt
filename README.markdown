@@ -17,6 +17,7 @@ Todo
 ----
  + Testing
  + implement update and export functions
+ + Add exception handling
 
 Commands
 --------

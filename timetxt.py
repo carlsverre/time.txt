@@ -25,13 +25,17 @@ import optparse
 import fileinput
 import re
 import datetime
+import time
 import math
 import shutil
 import os
+from os.path import exists as file_exists
+import sqlite3
 from operator import attrgetter
 
 # CONFIG
 TASK_FILE = '/home/carl/dropbox/tasks/time.txt'
+DATABASE = '/home/carl/databases/time_database.sqlite3'
 
 cat_starter = '+'
 default_category = 'uncategorized'
@@ -167,6 +171,18 @@ class Task:
     def get_session_time(self):
         return format_timedelta(self.session_time)
 
+    def clear_session_time(self):
+        self.session_time = datetime.timedelta()
+
+    def insert_into_sqlite3(self,conn,time_now):
+        c = conn.execute("""INSERT INTO tasks (description,category,total_time,last_updated,time_added)
+                        VALUES (?,?,?,?,?);""",
+                        (self.task,
+                        self.category,
+                        timedelta_to_seconds(self.time_total),
+                        time_now,
+                        time_now) )
+        return c.lastrowid
 
 # UTIL
 def load():
@@ -251,6 +267,9 @@ def format_timedelta(td):
     minutes = minutes % 60
     return str(int(hours)).zfill(2) + ":" + str(int(minutes)).zfill(2)
 
+def timedelta_to_seconds(td):
+    return (td.days * 24 * 60 * 60) + td.seconds
+
 def stdout_format(num, task, message, time=None, session=None):
     string = stdout_format_meta.format(num=num, msg=message)
     if time:
@@ -281,6 +300,8 @@ def get_args(parser):
 
 # CALLBACKS
 def add(option,opt,value,parser):
+    load()
+
     task_str = value.strip()
     if not task_str:
         print("Error: No task description")
@@ -292,13 +313,15 @@ def add(option,opt,value,parser):
 
     task_obj = Task(task=task_str, num=n)
 
-    stdout_format(task_obj.num, task_obj.task, '+'+task_obj.category)
+    stdout_format(task_obj.num, task_obj.task, 'added to '+task_obj.category)
     tasks.append(task_obj)
     save()
 
 
 def remove(option,opt,value,parser):
     global tasks
+    load()
+
     which = int(value)
     if which == -1:
         if prompt("Remove All Tasks?"):
@@ -309,11 +332,13 @@ def remove(option,opt,value,parser):
 
     for i,task in enumerate(tasks):
         if which == task.num:
-            stdout_format(task.num, task.task, '-'+task.category)
+            stdout_format(task.num, task.task, 'removed from '+task.category)
             del tasks[i]
             save()
 
 def start(option,opt,value,parser):
+    load()
+
     which = int(value)
     for i,task in enumerate(tasks):
         if which == task.num:
@@ -322,6 +347,8 @@ def start(option,opt,value,parser):
             save()
 
 def stop(option,opt,value,parser):
+    load()
+
     which = int(value)
     for i,task in enumerate(tasks):
         if which == task.num:
@@ -331,6 +358,8 @@ def stop(option,opt,value,parser):
             save()
 
 def list(option,opt,value,parser):
+    load()
+
     args = get_args(parser)
     categories = create_categories_list()
 
@@ -349,6 +378,8 @@ def list(option,opt,value,parser):
         print('')
 
 def total_time(option,opt,value,parser):
+    load()
+
     total = datetime.timedelta()
     total_session = datetime.timedelta()
     for task in tasks:
@@ -386,7 +417,85 @@ def update_database(option, opt, value, parser):
 
     Function also clears session_time for every task in text database
     """
-    pass
+    load()
+    
+    init_database = False
+    if not file_exists(DATABASE):
+        init_database = True
+
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    
+    if init_database:
+        conn.executescript("""
+                        CREATE TABLE sessions(
+                            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                            time_added TEXT,
+                            total_session_time INTEGER
+                        );
+                        CREATE TABLE tasks(
+                            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                            description TEXT,
+                            category TEXT,
+                            total_time INTEGER,
+                            last_updated TEXT,
+                            time_added TEXT,
+                            time_removed TEXT 
+                        );
+                        CREATE TABLE task_sessions(
+                            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                            task_id INTEGER,
+                            session_id INTEGER,
+                            session_time INTEGER,
+                            FOREIGN KEY(task_id) REFERENCES tasks(id),
+                            FOREIGN KEY(session_id) REFERENCES sessions(id)
+                        );
+                        CREATE TABLE last_session_tasks(
+                            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                            task_id INTEGER,
+                            FOREIGN KEY (task_id) REFERENCES tasks(id)
+                        );""")
+    
+    time_now = datetime.datetime.now().isoformat(' ')
+    
+    for task_row in conn.execute("""SELECT id,description FROM tasks WHERE id IN
+                                    (SELECT task_id FROM last_session_tasks);"""):
+        found = False
+        for task in tasks:
+            if task.task == task_row["description"]:
+                found = True
+
+        if not found: conn.execute('UPDATE tasks SET time_removed=?,last_updated=? WHERE id=?',
+                      (time_now, time_now, task_row["id"]))
+    
+    conn.execute('DELETE FROM last_session_tasks;')
+
+    conn.commit()
+
+    # create new session
+    conn.execute('INSERT INTO sessions (time_added) VALUES (?);', (time_now,))
+    session_id = conn.execute('SELECT id from sessions where time_added=?;', (time_now,))
+    session_id = session_id.fetchone()['id']
+
+    for task in tasks:
+        task_row = conn.execute('SELECT id from tasks where description=?;', (task.task,)).fetchone()
+        if not task_row:
+            task_id = task.insert_into_sqlite3(conn,time_now)
+        else:
+            task_id = task_row["id"]
+
+        conn.execute("""INSERT INTO task_sessions (task_id,session_id,session_time)
+                        VALUES(?,?,?)""",
+                        (task_id, session_id, timedelta_to_seconds(task.session_time)))
+        conn.execute("""INSERT INTO last_session_tasks (task_id) VALUES(?)""",
+                    (task_id,))
+
+        task.clear_session_time()
+    
+    conn.commit()
+    
+    save()
+            
 
 def export_csv(option, opt, value, parser):
     """
@@ -398,8 +507,6 @@ def main():
     """
     Program entry point
     """
-    # load the task file
-    load()
 
     # Parse the Command Line Args
     parser = optparse.OptionParser()
