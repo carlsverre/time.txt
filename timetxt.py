@@ -174,14 +174,19 @@ class Task:
     def clear_session_time(self):
         self.session_time = datetime.timedelta()
 
-    def insert_into_sqlite3(self,conn,time_now):
-        c = conn.execute("""INSERT INTO tasks (description,category,total_time,last_updated,time_added)
-                        VALUES (?,?,?,?,?);""",
-                        (self.task,
-                        self.category,
-                        timedelta_to_seconds(self.time_total),
-                        time_now,
-                        time_now) )
+    def session_time_seconds(self):
+        return timedelta_to_seconds(self.time_total)
+
+    def insert_into_sqlite3(self,conn):
+        c = conn.execute("""
+            INSERT INTO tasks (description,category,total_time,last_updated,time_added)
+            VALUES (?,?,?,datetime('now','localtime'),datetime('now','localtime'));""",
+            (
+                self.task,
+                self.category,
+                self.session_time_seconds()
+            )
+        )
         return c.lastrowid
 
 # UTIL
@@ -203,7 +208,7 @@ def load():
             continue
         tasks.append(Task(line=t, cat=last_category))
 
-def save():
+def save(copy=False):
     """
     Saves all the tasks
     """
@@ -227,7 +232,10 @@ def save():
 
     # Close and then move temp file to task_file (apply changes)
     temp.close()
-    shutil.move(temp.name, TASK_FILE)
+    if copy:
+        shutil.move(temp.name, TASK_FILE + ".bak")
+    else:
+        shutil.move(temp.name, TASK_FILE)
 
 def create_categories_list():
     tasks.sort(key=attrgetter('category'))
@@ -393,31 +401,10 @@ def update_database(option, opt, value, parser):
     """
     This function updates a sqlite database with the latest
     session data.
-
-    Database := {last_session_tasks, sessions, tasks}
-        last session tasks  :=  table of the tasks which were in the time.txt database
-                                as of the last session
-        sessions            :=  table of all the sessions
-        tasks               :=  table of all the tasks
-
-    For each task in database.last_session_tasks:
-        if task not in time.txt:
-            task.datetime_removed = now
-        
-    For each task in tasks:
-        if not database[task]:
-            create database[task]
-               task := {id, description, total_time, last_updated, datetime_added, datetime_removed} 
-        Create database[session]:
-            session := {id, task_key, datetime_now, task_key->last_updated, session_time}
-        database[task]->last_updated = now
-        database[task]->total_time = task.total_time
-
-    Note database[task]->id != task.num
-
-    Function also clears session_time for every task in text database
     """
     load()
+
+    save(True);         # Save a copy of the current task.txt file
     
     init_database = False
     if not file_exists(DATABASE):
@@ -430,7 +417,7 @@ def update_database(option, opt, value, parser):
         conn.executescript("""
                         CREATE TABLE sessions(
                             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                            time_added TEXT,
+                            time_added DATE,
                             total_session_time INTEGER
                         );
                         CREATE TABLE tasks(
@@ -438,9 +425,9 @@ def update_database(option, opt, value, parser):
                             description TEXT,
                             category TEXT,
                             total_time INTEGER,
-                            last_updated TEXT,
-                            time_added TEXT,
-                            time_removed TEXT 
+                            last_updated DATE,
+                            time_added DATE,
+                            time_removed DATE
                         );
                         CREATE TABLE task_sessions(
                             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -456,31 +443,32 @@ def update_database(option, opt, value, parser):
                             FOREIGN KEY (task_id) REFERENCES tasks(id)
                         );""")
     
-    time_now = datetime.datetime.now().isoformat(' ')
-    
-    for task_row in conn.execute("""SELECT id,description FROM tasks WHERE id IN
-                                    (SELECT task_id FROM last_session_tasks);"""):
+    for task_row in conn.execute("""
+            SELECT id,description FROM tasks WHERE id IN
+            (SELECT task_id FROM last_session_tasks);"""):
         found = False
         for task in tasks:
             if task.task == task_row["description"]:
                 found = True
 
-        if not found: conn.execute('UPDATE tasks SET time_removed=?,last_updated=? WHERE id=?',
-                      (time_now, time_now, task_row["id"]))
+        if not found: conn.execute("""
+            UPDATE tasks SET
+                time_removed=datetime("now","localtime"),
+                last_updated=datetime('now','localtime')
+            WHERE id=?""", task_row["id"])
     
     conn.execute('DELETE FROM last_session_tasks;')
 
     conn.commit()
 
     # create new session
-    conn.execute('INSERT INTO sessions (time_added) VALUES (?);', (time_now,))
-    session_id = conn.execute('SELECT id from sessions where time_added=?;', (time_now,))
-    session_id = session_id.fetchone()['id']
+    conn.execute('INSERT INTO sessions (time_added) VALUES (datetime("now","localtime"));')
+    session_id = conn.execute('SELECT last_insert_rowid();').fetchone()[0]
 
     for task in tasks:
         task_row = conn.execute('SELECT id from tasks where description=?;', (task.task,)).fetchone()
         if not task_row:
-            task_id = task.insert_into_sqlite3(conn,time_now)
+            task_id = task.insert_into_sqlite3(conn)
         else:
             task_id = task_row["id"]
 
@@ -489,8 +477,14 @@ def update_database(option, opt, value, parser):
                         (task_id, session_id, timedelta_to_seconds(task.session_time)))
         conn.execute("""INSERT INTO last_session_tasks (task_id) VALUES(?)""",
                     (task_id,))
-
+        
         task.clear_session_time()
+
+    conn.execute("""
+        UPDATE sessions SET total_session_time=(
+            SELECT SUM(session_time) FROM task_sessions WHERE task_id IN (
+                SELECT task_id FROM last_session_tasks) and session_id=?) WHERE id=?;""",
+        ( session_id,session_id ))
     
     conn.commit()
     
