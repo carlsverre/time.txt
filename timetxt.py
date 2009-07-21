@@ -194,6 +194,10 @@ def load():
     """
     Loads the task list
     """
+    global comments, tasks
+
+    comments = []
+    tasks = []
 
     last_category = default_category
 
@@ -455,7 +459,7 @@ def update_database(option, opt, value, parser):
             UPDATE tasks SET
                 time_removed=datetime("now","localtime"),
                 last_updated=datetime('now','localtime')
-            WHERE id=?""", task_row["id"])
+            WHERE id=?""", (task_row["id"], ))
     
     conn.execute('DELETE FROM last_session_tasks;')
 
@@ -471,6 +475,9 @@ def update_database(option, opt, value, parser):
             task_id = task.insert_into_sqlite3(conn)
         else:
             task_id = task_row["id"]
+            conn.execute("""UPDATE tasks SET
+                                last_updated=datetime('now','localtime')
+                            WHERE id=?""", (task_id, ));
 
         conn.execute("""INSERT INTO task_sessions (task_id,session_id,session_time)
                         VALUES(?,?,?)""",
@@ -478,6 +485,7 @@ def update_database(option, opt, value, parser):
         conn.execute("""INSERT INTO last_session_tasks (task_id) VALUES(?)""",
                     (task_id,))
         
+        task.update_total_time()
         task.clear_session_time()
 
     conn.execute("""
