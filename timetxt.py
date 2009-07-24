@@ -164,6 +164,7 @@ class Task:
             difference = now - self.time_start
             self.time_total = self.time_total + difference
             self.session_time = self.session_time + difference
+            self.time_start = now
 
     def get_total_time(self):
         return format_timedelta(self.time_total)
