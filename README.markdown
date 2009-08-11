@@ -18,6 +18,7 @@ Todo
  + Testing
  + implement update and export functions
  + Add exception handling
+ + Rewrite whole thing in sql
 
 Commands
 --------
